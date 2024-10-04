@@ -18,7 +18,7 @@
 
         /* Styles for controls and legend */
         .control-box {
-            padding: 5px 10px; /* Reduced padding */
+            padding: 5px 10px;
             background-color: white;
             border: 1px solid #ccc;
             position: absolute;
@@ -29,18 +29,18 @@
         }
 
         #controls {
-            bottom: 80px; /* Positioned slightly above the legend */
-            left: 10px;  /* Positioned to the left */
-            width: 150px; /* Adjusted width to fit content */
+            bottom: 80px;
+            left: 10px;
+            width: 150px;
         }
 
         #legend {
-            bottom: 20px; /* Positioned at the left corner */
+            bottom: 20px;
             left: 10px;
             max-height: 300px;
             overflow-y: auto;
             font-size: 12px;
-            width: 400px; /* Adjusted width */
+            width: 400px;
         }
 
         .legend-color {
@@ -74,41 +74,16 @@
 
     <!-- Layers control box -->
     <div id="controls" class="control-box">
-        <h4 style="margin: 0;">Layers</h4> <!-- Removed margin above the heading -->
+        <h4 style="margin: 0;">Layers</h4>
         <label><input type="checkbox" id="boundary-layer" checked> City Boundary</label><br>
-        <label><input type="checkbox" id="taxlots-layer"> Tax Lots</label><br> <!-- Unchecked by default -->
-        <label><input type="checkbox" id="zoning-layer" checked> Zoning</label>
+        <label><input type="checkbox" id="taxlots-layer"> Tax Lots</label><br>
+        <label><input type="checkbox" id="zoning-layer"> Zoning</label> <!-- Turned off by default -->
     </div>
 
     <!-- Legend for zoning colors -->
     <div id="legend" class="control-box">
         <h4>Legend</h4>
-        <div><span class="legend-color" style="background-color: #00bfff;"></span> C1 (Local Business) District</div>
-        <div><span class="legend-color" style="background-color: #ffff66;"></span> C2 (General Business) District</div>
-        <div><span class="legend-color" style="background-color: #ff69b4;"></span> CEM (Cemetery) District</div>
-        <div><span class="legend-color" style="background-color: #8b0000;"></span> CM (Commercial-Industrial) District</div>
-        <div><span class="legend-color" style="background-color: #8a2be2;"></span> CR (Restricted Commercial) District</div>
-        <div><span class="legend-color" style="background-color: #d3d3d3;"></span> FC (Flood Control Channel)</div>
-        <div><span class="legend-color" style="background-color: #ffa07a;"></span> M1 (Light Industrial) District</div>
-        <div><span class="legend-color" style="background-color: #a0522d;"></span> M2 (Medium Industrial)</div>
-        <div><span class="legend-color" style="background-color: #9370db;"></span> MU36 (Mixed-Use 36 units/acre)</div>
-        <div><span class="legend-color" style="background-color: #d8bfd8;"></span> MU40 (Mixed-Use 40 units/acre)</div>
-        <div><span class="legend-color" style="background-color: #006400;"></span> P/OS (Park/Open Space) District</div>
-        <div><span class="legend-color" style="background-color: #ffd700;"></span> P/SP (Public/Semi-Public) District</div>
-        <div><span class="legend-color" style="background-color: #ff4500;"></span> PF (Public Facilities) District</div>
-        <div><span class="legend-color" style="background-color: #32cd32;"></span> R-3 (Multiple Family Res-13-14 Units/Acre)</div>
-        <div><span class="legend-color" style="background-color: #ff6347;"></span> R-5 (Multiple Family Res-19-25 Units/Acre)</div>
-        <div><span class="legend-color" style="background-color: #40e0d0;"></span> R1 (Single-Family Residential) District</div>
-        <div><span class="legend-color" style="background-color: #ff7f50;"></span> R2 (Multiple-Family Residential -12 Units/Acre) District</div>
-        <div><span class="legend-color" style="background-color: #dc143c;"></span> R3 (Multiple-Family Residential 13 to 14 Units/Acre) District</div>
-        <div><span class="legend-color" style="background-color: #8b4513;"></span> R4 (Multiple-Family Residential 15 to 18 Units/Acre)</div>
-        <div><span class="legend-color" style="background-color: #9400d3;"></span> R5 (Multiple-Family Residential 19 to 25 Units/Acre)</div>
-        <div><span class="legend-color" style="background-color: #d2691e;"></span> ROW (Right-of-Way)</div>
-        <div><span class="legend-color" style="background-color: #a9a9a9;"></span> RR/ROW (Railroad Right-of-Way)</div>
-        <div><span class="legend-color" style="background-color: #4682b4;"></span> SOI (Sphere of Influence)</div>
-        <div><span class="legend-color" style="background-color: #7fff00;"></span> SP-1 (Specific Plan) District</div>
-        <div><span class="legend-color" style="background-color: #adff2f;"></span> SP-2 (Specific Plan) District</div>
-        <div><span class="legend-color" style="background-color: #228b22;"></span> SP-3 (Westminster Mall Specific Plan)</div>
+        <!-- Add other legend items as needed -->
     </div>
 
     <div id="map"></div>
@@ -122,7 +97,7 @@
 
         // Initialize and add the map
         function initMap() {
-            const centerPoint = { lat: 33.7507, lng: -117.9935 }; 
+            const centerPoint = { lat: 32.7157, lng: -117.1611 }; // Centered on San Diego
 
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 14,
@@ -142,14 +117,14 @@
 
             // Add the legend to the map
             const legend = document.getElementById('legend');
-            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
+            map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(legend);
 
             // Load the City Boundary Layer
             boundaryLayer = new google.maps.Data();
             boundaryLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Bdry.geojson');
             boundaryLayer.setStyle({
-                fillOpacity: 0, // 100% transparent fill
-                strokeColor: '#000000', // Black border
+                fillOpacity: 0,
+                strokeColor: '#000000',
                 strokeWeight: 2
             });
             boundaryLayer.setMap(map);
@@ -158,16 +133,31 @@
             taxLotsLayer = new google.maps.Data();
             taxLotsLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels.geojson');
             taxLotsLayer.setStyle({
-                fillOpacity: 0, // 100% transparent fill
-                strokeColor: '#FF0000', // Red border
+                fillOpacity: 0,
+                strokeColor: '#FF0000',
                 strokeWeight: 2
             });
 
-            // Load the Zoning Layer
+            // Load the Zoning Layer but do not add it to the map initially
             zoningLayer = new google.maps.Data();
             zoningLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Zoning.geojson');
-            zoningLayer.setStyle(styleZoningLayer);
-            zoningLayer.setMap(map);
+            zoningLayer.setStyle({
+                fillColor: '#808080',
+                strokeColor: '#000000',
+                strokeWeight: 1,
+                fillOpacity: 0.4
+            });
+
+            // Add labels based on "ZONE_NAME" field
+            zoningLayer.addListener('addfeature', function(event) {
+                const zoneName = event.feature.getProperty('ZONE_NAME');
+                const label = new google.maps.InfoWindow({
+                    content: zoneName,
+                    position: event.feature.getGeometry().get()
+                });
+
+                event.feature.setProperty('label', label);
+            });
 
             // Add layer controls
             document.getElementById('boundary-layer').addEventListener('change', function() {
@@ -179,7 +169,17 @@
             });
 
             document.getElementById('zoning-layer').addEventListener('change', function() {
-                zoningLayer.setMap(this.checked ? map : null);
+                if (this.checked) {
+                    zoningLayer.setMap(map);
+                } else {
+                    zoningLayer.forEach(function(feature) {
+                        const label = feature.getProperty('label');
+                        if (label) {
+                            label.close();
+                        }
+                    });
+                    zoningLayer.setMap(null);
+                }
             });
 
             // Add event listeners for the toggle buttons
@@ -190,50 +190,6 @@
             toggleControlsBtn.addEventListener('click', function() {
                 toggleVisibility('controls');
             });
-        }
-
-        // Style function for zoning layer based on "ZONEDEF2" property
-        function styleZoningLayer(feature) {
-            const zoneType = feature.getProperty('ZONEDEF2');
-            let fillColor = '#808080'; // Default color for unspecified zones
-            
-            // Assign colors based on the "ZONEDEF2" values
-            switch (zoneType) {
-                case 'C1 (Local Business) District': fillColor = '#00bfff'; break;  // Light blue
-                case 'C2 (General Business) District': fillColor = '#ffff66'; break;  // Light yellow
-                case 'CEM (Cemetery) District': fillColor = '#ff69b4'; break;  // Pink
-                case 'CM (Commercial-Industrial) District': fillColor = '#8b0000'; break;  // Dark red
-                case 'CR (Restricted Commercial) District': fillColor = '#8a2be2'; break;  // Blue violet
-                case 'FC (Flood Control Channel)': fillColor = '#d3d3d3'; break;  // Light gray
-                case 'M1 (Light Industrial) District': fillColor = '#ffa07a'; break;  // Light salmon
-                case 'M2 (Medium Industrial)': fillColor = '#a0522d'; break;  // Sienna
-                case 'MU36 (Mixed-Use 36 units/acre)': fillColor = '#9370db'; break;  // Medium purple
-                case 'MU40 (Mixed-Use 40 units/acre)': fillColor = '#d8bfd8'; break;  // Thistle
-                case 'P/OS (Park/Open Space) District': fillColor = '#006400'; break;  // Dark green
-                case 'P/SP (Public/Semi-Public) District': fillColor = '#ffd700'; break;  // Gold
-                case 'PF (Public Facilities) District': fillColor = '#ff4500'; break;  // Orange red
-                case 'R-3 (Multiple Family Res-13-14 Units/Acre)': fillColor = '#32cd32'; break;  // Lime green
-                case 'R-5 (Multiple Family Res-19-25 Units/Acre)': fillColor = '#ff6347'; break;  // Tomato
-                case 'R1 (Single-Family Residential) District': fillColor = '#40e0d0'; break;  // Turquoise
-                case 'R2 (Multiple-Family Residential -12 Units/Acre) District': fillColor = '#ff7f50'; break;  // Coral
-                case 'R3 (Multiple-Family Residential 13 to 14 Units/Acre) District': fillColor = '#dc143c'; break;  // Crimson
-                case 'R4 (Multiple-Family Residential 15 to 18 Units/Acre)': fillColor = '#8b4513'; break;  // Saddle brown
-                case 'R5 (Multiple-Family Residential 19 to 25 Units/Acre)': fillColor = '#9400d3'; break;  // Dark violet
-                case 'ROW (Right-of-Way)': fillColor = '#d2691e'; break;  // Chocolate
-                case 'RR/ROW (Railroad Right-of-Way)': fillColor = '#a9a9a9'; break;  // Dark gray
-                case 'SOI (Sphere of Influence)': fillColor = '#4682b4'; break;  // Steel blue
-                case 'SP-1 (Specific Plan) District': fillColor = '#7fff00'; break;  // Chartreuse
-                case 'SP-2 (Specific Plan) District': fillColor = '#adff2f'; break;  // Green yellow
-                case 'SP-3 (Westminster Mall Specific Plan)': fillColor = '#228b22'; break;  // Forest green
-                default: fillColor = '#808080'; break;  // Default gray for unspecified zones
-            }
-            
-            return {
-                fillColor: fillColor,
-                strokeColor: '#000000', // Optional: Border color for zoning
-                strokeWeight: 1,
-                fillOpacity: 0.6
-            };
         }
 
         // Toggle visibility function
