@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GIS Zoning Map (Westminster, CA)</title>
+    <title>GIS Zoning Map (City of San Diego, CA)</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* Basic styling */
@@ -70,7 +70,7 @@
     </style>
 </head>
 <body>
-    <h3>GIS Zoning Map (Westminster, CA)</h3>
+    <h3>GIS Zoning Map (City of San Diego, CA)</h3>
 
     <!-- Layers control box -->
     <div id="controls" class="control-box">
@@ -146,7 +146,7 @@
 
             // Load the City Boundary Layer
             boundaryLayer = new google.maps.Data();
-            boundaryLayer.loadGeoJson('https://storage.googleapis.com/westminster_ca/Westminster_CityBoundary.geojson');
+            boundaryLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Bdry.geojson');
             boundaryLayer.setStyle({
                 fillOpacity: 0, // 100% transparent fill
                 strokeColor: '#000000', // Black border
@@ -156,7 +156,7 @@
 
             // Load the Tax Lots Layer but do not add it to the map initially
             taxLotsLayer = new google.maps.Data();
-            taxLotsLayer.loadGeoJson('https://storage.googleapis.com/westminster_ca/Westminster_CityTaxLots.geojson');
+            taxLotsLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels.geojson');
             taxLotsLayer.setStyle({
                 fillOpacity: 0, // 100% transparent fill
                 strokeColor: '#FF0000', // Red border
@@ -165,7 +165,7 @@
 
             // Load the Zoning Layer
             zoningLayer = new google.maps.Data();
-            zoningLayer.loadGeoJson('https://storage.googleapis.com/westminster_ca/Westminster_CityZoning.geojson');
+            zoningLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Zoning.geojson');
             zoningLayer.setStyle(styleZoningLayer);
             zoningLayer.setMap(map);
 
