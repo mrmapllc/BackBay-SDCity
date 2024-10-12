@@ -67,33 +67,52 @@
         .collapse-btn:hover {
             background-color: #f0f0f0;
         }
+
+        /* Style for the search bar */
+        .controls {
+            margin-top: 10px;
+            background-color: #fff;
+            border-radius: 3px;
+            border: 1px solid transparent;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            font-size: 16px;
+            outline: none;
+            padding: 10px;
+            margin-left: 10px;
+            width: 400px;
+        }
     </style>
 </head>
 <body>
     <h3>GIS Zoning Map (City of San Diego, CA)</h3>
 
+    <!-- Search bar input field -->
+    <input id="pac-input" class="controls" type="text" placeholder="Search for an address" />
+
     <!-- Layers control box -->
     <div id="controls" class="control-box">
         <h4 style="margin: 0;">Layers</h4>
         <label><input type="checkbox" id="boundary-layer" checked> City Boundary</label><br>
-        <label><input type="checkbox" id="taxlots-layer"> Tax Lots</label><br>
-        <label><input type="checkbox" id="zoning-layer"> Zoning</label> <!-- Turned off by default -->
+        <label><input type="checkbox" id="taxlots-layer" checked> Tax Lots</label><br>
+        <label><input type="checkbox" id="zoning-layer" checked> Zoning</label>
     </div>
 
-    <!-- Legend for zoning colors -->
+    <!-- Legend for zoning and lots symbology -->
     <div id="legend" class="control-box">
         <h4>Legend</h4>
-        <!-- Add other legend items as needed -->
+        <h5>Tax Lots Status</h5>
+        <!-- Tax Lots Status legend here -->
+        <!-- (Already updated as in previous steps) -->
     </div>
 
     <div id="map"></div>
 
     <!-- Load the Google Maps JavaScript API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCopWxzsrH0C5BUwVKJl0iG3omupkgmw60&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCopWxzsrH0C5BUwVKJl0iG3omupkgmw60&libraries=places&callback=initMap" async defer></script>
     
     <script>
         let map;
-        let boundaryLayer, taxLotsLayer, zoningLayer;
+        let boundaryLayer, taxLotsLayer, zoningLayer, markers = [];
 
         // Initialize and add the map
         function initMap() {
@@ -117,7 +136,7 @@
 
             // Add the legend to the map
             const legend = document.getElementById('legend');
-            map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(legend);
+            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
 
             // Load the City Boundary Layer
             boundaryLayer = new google.maps.Data();
@@ -129,34 +148,32 @@
             });
             boundaryLayer.setMap(map);
 
-            // Load the Tax Lots Layer but do not add it to the map initially
+            // Load the Tax Lots Layer and apply the symbology based on "Status"
             taxLotsLayer = new google.maps.Data();
             taxLotsLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels.geojson');
-            taxLotsLayer.setStyle({
-                fillOpacity: 0,
-                strokeColor: '#FF0000',
-                strokeWeight: 2
-            });
+            taxLotsLayer.setStyle(styleLotsLayer);
+            taxLotsLayer.setMap(map); // Enable this layer by default
 
-            // Load the Zoning Layer but do not add it to the map initially
+            // Load the Zoning Layer with black border and no fill
             zoningLayer = new google.maps.Data();
             zoningLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Zoning.geojson');
             zoningLayer.setStyle({
-                fillColor: '#808080',
-                strokeColor: '#000000',
-                strokeWeight: 1,
-                fillOpacity: 0.4
+                fillOpacity: 0,  // No fill (transparent)
+                strokeColor: '#000000',  // Black border
+                strokeWeight: 1
             });
+            zoningLayer.setMap(map);
 
-            // Add labels based on "ZONE_NAME" field
+            // Add labels for ZONE_NAME field
             zoningLayer.addListener('addfeature', function(event) {
                 const zoneName = event.feature.getProperty('ZONE_NAME');
-                const label = new google.maps.InfoWindow({
+                const infowindow = new google.maps.InfoWindow({
                     content: zoneName,
                     position: event.feature.getGeometry().get()
                 });
+                infowindow.open(map);
 
-                event.feature.setProperty('label', label);
+                event.feature.setProperty('infowindow', infowindow);
             });
 
             // Add layer controls
@@ -169,17 +186,7 @@
             });
 
             document.getElementById('zoning-layer').addEventListener('change', function() {
-                if (this.checked) {
-                    zoningLayer.setMap(map);
-                } else {
-                    zoningLayer.forEach(function(feature) {
-                        const label = feature.getProperty('label');
-                        if (label) {
-                            label.close();
-                        }
-                    });
-                    zoningLayer.setMap(null);
-                }
+                zoningLayer.setMap(this.checked ? map : null);
             });
 
             // Add event listeners for the toggle buttons
@@ -190,6 +197,110 @@
             toggleControlsBtn.addEventListener('click', function() {
                 toggleVisibility('controls');
             });
+
+            // Initialize the search box
+            initSearchBox();
+        }
+
+        // Initialize the search box for the map
+        function initSearchBox() {
+            const input = document.getElementById('pac-input');
+            const searchBox = new google.maps.places.SearchBox(input);
+            map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+            // Bias the SearchBox results towards the current map view.
+            map.addListener('bounds_changed', function() {
+                searchBox.setBounds(map.getBounds());
+            });
+
+            // Listen for the event fired when the user selects a prediction and retrieves more details.
+            searchBox.addListener('places_changed', function() {
+                const places = searchBox.getPlaces();
+
+                if (places.length == 0) {
+                    return;
+                }
+
+                // Clear out the old markers.
+                markers.forEach(function(marker) {
+                    marker.setMap(null);
+                });
+                markers = [];
+
+                // Get the icon, name, and location of each place.
+                const bounds = new google.maps.LatLngBounds();
+                places.forEach(function(place) {
+                    if (!place.geometry || !place.geometry.location) {
+                        console.log("Returned place contains no geometry");
+                        return;
+                    }
+
+                    const marker = new google.maps.Marker({
+                        map: map,
+                        title: place.name,
+                        position: place.geometry.location
+                    });
+
+                    markers.push(marker);
+
+                    if (place.geometry.viewport) {
+                        // Only geocode has viewport.
+                        bounds.union(place.geometry.viewport);
+                    } else {
+                        bounds.extend(place.geometry.location);
+                    }
+                });
+                map.fitBounds(bounds);
+            });
+        }
+
+        // Style function for the tax lots layer based on the "Status" property
+        function styleLotsLayer(feature) {
+            const status = feature.getProperty('Status');
+            console.log('Lot Status:', status); // Debugging line
+            let fillColor = '#ffa500'; // Default for null (gray)
+            
+            switch (status) {
+                case null:
+                    fillColor = '#808080'; // Gray for null
+                    break;
+                case 'Qualified':
+                    fillColor = '#00bfff'; // Light blue
+                    break;
+                case 'Contacted':
+                    fillColor = '#ff69b4'; // Pink
+                    break;
+                case 'Prospect':
+                    fillColor = '#ffd700'; // Gold
+                    break;
+                case 'Offer Out':
+                    fillColor = '#ff4500'; // Orange red
+                    break;
+                case 'Negotiation':
+                    fillColor = '#8a2be2'; // Blue violet
+                    break;
+                case 'Accepted Offer':
+                    fillColor = '#32cd32'; // Lime green
+                    break;
+                case 'PSA Signed':
+                    fillColor = '#ff6347'; // Tomato
+                    break;
+                case 'Closed':
+                    fillColor = '#9400d3'; // Dark violet
+                    break;
+                case 'No-Gos':
+                    fillColor = '#8b0000'; // Dark red
+                    break;
+                default:
+                    fillColor = '#808080'; // Gray for unspecified status
+            }
+
+            return {
+                fillColor: fillColor,
+                strokeColor: '#ff0000', // Red border
+                strokeWeight: 1,
+                fillOpacity: 0.5 // 50% transparency
+            };
         }
 
         // Toggle visibility function
