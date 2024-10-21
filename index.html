@@ -214,17 +214,17 @@
         let isLoading = true;
         let infoWindow;
         let markers = []; // To store search results markers
-
+    
         // Show loading spinner while the map is loading
         function showLoading() {
             document.getElementById('loading').style.display = 'block';
         }
-
+    
         // Hide loading spinner once the map is loaded
         function hideLoading() {
             document.getElementById('loading').style.display = 'none';
         }
-
+    
         // Toggle the control panel
         document.getElementById('tools-btn').addEventListener('click', function() {
             const controlPanel = document.getElementById('control-panel');
@@ -234,21 +234,21 @@
                 controlPanel.style.display = 'none';
             }
         });
-
+    
         // Initialize and add the map
         function initMap() {
             showLoading();
-
+    
             const centerPoint = { lat: 32.8746, lng: -117.1222 }; // Centered on San Diego
-
+    
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 12, // Zoom set to 12
                 center: centerPoint,
                 gestureHandling: "greedy" // Allow zooming with mouse scroll directly
             });
-
+    
             infoWindow = new google.maps.InfoWindow();
-
+    
             // Load the City Boundary Layer
             boundaryLayer = new google.maps.Data();
             boundaryLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Bdry.geojson');
@@ -258,7 +258,7 @@
                 strokeWeight: 2
             });
             boundaryLayer.setMap(map);
-
+    
             // Load the Zoning Layer
             zoningLayer = new google.maps.Data();
             zoningLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Zoning.geojson');
@@ -268,73 +268,60 @@
                 strokeWeight: 1
             });
             zoningLayer.setMap(map);
-
-            // Load the Tax Lots Layer
-            taxLotsLayer = new google.maps.Data();
-            taxLotsLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels.geojson');
-            taxLotsLayer.setStyle({
-                fillOpacity: 0, // Full transparency
-                strokeColor: '#FF0000', // Red border
-                strokeWeight: 2
-            });
-            taxLotsLayer.setMap(map); // Make sure the tax lots layer is added to the map
-
-            // Add a click listener to the tax lots layer to show a pop-up with specific information
-            taxLotsLayer.addListener('click', function(event) {
-                const siteAddress = event.feature.getProperty('SiteAddres') || 'No Address Available';
-                const zoning = event.feature.getProperty('ZONEDEF2') || 'Zoning Not Specified';
-                const legalDescription = event.feature.getProperty('LegalDescr') || 'Legal Description Not Available';
-
-                const contentString = `
-                    <div style="margin: 0; padding: 5px;">
-                        <h3 style="margin: 0; padding: 0; font-size: 18px;">${siteAddress}</h3>
-                        <p style="margin: 5px 0; padding: 0;"><strong>Zoning:</strong> ${zoning}</p>
-                        <p style="margin: 5px 0; padding: 0;"><strong>Legal Description:</strong> ${legalDescription}</p>
-                    </div>
-                `;
-
-                infoWindow.setContent(contentString);
-                infoWindow.setPosition(event.latLng);
-                infoWindow.open(map);
-            });
-
-            // Zoning pop-up (only when tax lot layer is off)
-            zoningLayer.addListener('click', function(event) {
-                const zoning = event.feature.getProperty('ZONEDEF2') || 'Zoning Not Specified';
-
-                const contentString = `
-                    <div style="margin: 0; padding: 5px;">
-                        <p style="margin: 0; padding: 0;"><strong>Zoning:</strong> ${zoning}</p>
-                    </div>
-                `;
-
-                infoWindow.setContent(contentString);
-                infoWindow.setPosition(event.latLng);
-                infoWindow.open(map);
-            });
-
-            // Add layer control for tax lots and zoning layers
+    
+            // Fetch parcels from ArcGIS Feature Service in GeoJSON format
+            fetch("https://geo.sandag.org/server/rest/services/Hosted/Parcels/FeatureServer/0/query?where=1%3D1&outFields=*&f=geojson")
+                .then(response => response.json())
+                .then(data => {
+                    // Load the GeoJSON data into Google Maps
+                    map.data.addGeoJson(data);
+    
+                    // Set style for parcels layer
+                    map.data.setStyle({
+                        fillOpacity: 0,
+                        strokeColor: '#FF0000',
+                        strokeWeight: 2
+                    });
+    
+                    // Add pop-up when clicking on a parcel
+                    map.data.addListener('click', function(event) {
+                        const parcelId = event.feature.getProperty('PARCEL_ID') || 'Parcel ID Not Available';
+                        const mailAddress = event.feature.getProperty('MailAddres') || 'Mail Address Not Available';
+                        const legalLotId = event.feature.getProperty('LegalLotID') || 'Legal Lot ID Not Available';
+    
+                        const contentString = `
+                            <div style="margin: 0; padding: 5px;">
+                                <h3 style="margin: 0; font-size: 18px;">Parcel ID: ${parcelId}</h3>
+                                <p><strong>Mail Address:</strong> ${mailAddress}</p>
+                                <p><strong>Legal Lot ID:</strong> ${legalLotId}</p>
+                            </div>
+                        `;
+    
+                        infoWindow.setContent(contentString);
+                        infoWindow.setPosition(event.latLng);
+                        infoWindow.open(map);
+                    });
+                })
+                .catch(error => console.error('Error loading data:', error));
+    
+            // Add layer control for boundary and zoning layers
             document.getElementById('boundary-layer').addEventListener('change', function() {
                 boundaryLayer.setMap(this.checked ? map : null);
             });
-
-            document.getElementById('taxlots-layer').addEventListener('change', function() {
-                taxLotsLayer.setMap(this.checked ? map : null);
-            });
-
+    
             document.getElementById('zoning-layer').addEventListener('change', function() {
                 zoningLayer.setMap(this.checked ? map : null);
             });
-
+    
             // Hide the loading spinner once the map and layers are fully loaded
             google.maps.event.addListenerOnce(map, 'idle', function(){
                 hideLoading();
             });
-
+    
             // Initialize search box
             initSearchBox();
         }
-
+    
         // Initialize the search box for the map
         function initSearchBox() {
             const input = document.createElement('input');
@@ -342,28 +329,28 @@
             input.placeholder = 'Search for an address';
             input.classList.add('controls');
             map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
-
+    
             const searchBox = new google.maps.places.SearchBox(input);
-
+    
             // Bias the SearchBox results towards current map's viewport
             map.addListener('bounds_changed', function() {
                 searchBox.setBounds(map.getBounds());
             });
-
+    
             // Listen for the event fired when the user selects a prediction and retrieves more details.
             searchBox.addListener('places_changed', function() {
                 const places = searchBox.getPlaces();
-
+    
                 if (places.length === 0) {
                     return;
                 }
-
+    
                 // Clear out the old markers.
                 markers.forEach(function(marker) {
                     marker.setMap(null);
                 });
                 markers = [];
-
+    
                 // For each place, get the icon, name and location.
                 const bounds = new google.maps.LatLngBounds();
                 places.forEach(function(place) {
@@ -371,16 +358,16 @@
                         console.log("Returned place contains no geometry");
                         return;
                     }
-
+    
                     // Create a marker for each place.
                     const marker = new google.maps.Marker({
                         map: map,
                         title: place.name,
                         position: place.geometry.location
                     });
-
+    
                     markers.push(marker);
-
+    
                     if (place.geometry.viewport) {
                         bounds.union(place.geometry.viewport);
                     } else {
@@ -391,5 +378,6 @@
             });
         }
     </script>
+
 </body>
 </html>
