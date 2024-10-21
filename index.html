@@ -207,7 +207,7 @@
 
     <!-- Load the Google Maps JavaScript API and Places Library -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCopWxzsrH0C5BUwVKJl0iG3omupkgmw60&libraries=places&callback=initMap" async defer></script>
-
+    
     <script>
         let map;
         let boundaryLayer, taxLotsLayer, zoningLayer;
@@ -269,44 +269,57 @@
             });
             zoningLayer.setMap(map);
     
-            // Fetch parcels from ArcGIS Feature Service in GeoJSON format
-            fetch("https://geo.sandag.org/server/rest/services/Hosted/Parcels/FeatureServer/0/query?where=1%3D1&outFields=*&f=geojson")
-                .then(response => response.json())
-                .then(data => {
-                    // Load the GeoJSON data into Google Maps
-                    map.data.addGeoJson(data);
+            // Load the Tax Lots Layer from Google Cloud Storage GeoJSON
+            taxLotsLayer = new google.maps.Data();
+            taxLotsLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_ParcelsSouth.geojson');
+            taxLotsLayer.setStyle({
+                fillOpacity: 0, // Full transparency
+                strokeColor: '#FF0000', // Red border
+                strokeWeight: 2
+            });
+            taxLotsLayer.setMap(map); // Make sure the tax lots layer is added to the map
     
-                    // Set style for parcels layer
-                    map.data.setStyle({
-                        fillOpacity: 0,
-                        strokeColor: '#FF0000',
-                        strokeWeight: 2
-                    });
+            // Add a click listener to the tax lots layer to show a pop-up with specific information
+            taxLotsLayer.addListener('click', function(event) {
+                const siteAddress = event.feature.getProperty('SiteAddres') || 'No Address Available';
+                const zoning = event.feature.getProperty('ZONEDEF2') || 'Zoning Not Specified';
+                const legalDescription = event.feature.getProperty('LegalDescr') || 'Legal Description Not Available';
     
-                    // Add pop-up when clicking on a parcel
-                    map.data.addListener('click', function(event) {
-                        const parcelId = event.feature.getProperty('PARCEL_ID') || 'Parcel ID Not Available';
-                        const mailAddress = event.feature.getProperty('MailAddres') || 'Mail Address Not Available';
-                        const legalLotId = event.feature.getProperty('LegalLotID') || 'Legal Lot ID Not Available';
+                const contentString = `
+                    <div style="margin: 0; padding: 5px;">
+                        <h3 style="margin: 0; padding: 0; font-size: 18px;">${siteAddress}</h3>
+                        <p style="margin: 5px 0; padding: 0;"><strong>Zoning:</strong> ${zoning}</p>
+                        <p style="margin: 5px 0; padding: 0;"><strong>Legal Description:</strong> ${legalDescription}</p>
+                    </div>
+                `;
     
-                        const contentString = `
-                            <div style="margin: 0; padding: 5px;">
-                                <h3 style="margin: 0; font-size: 18px;">Parcel ID: ${parcelId}</h3>
-                                <p><strong>Mail Address:</strong> ${mailAddress}</p>
-                                <p><strong>Legal Lot ID:</strong> ${legalLotId}</p>
-                            </div>
-                        `;
+                infoWindow.setContent(contentString);
+                infoWindow.setPosition(event.latLng);
+                infoWindow.open(map);
+            });
     
-                        infoWindow.setContent(contentString);
-                        infoWindow.setPosition(event.latLng);
-                        infoWindow.open(map);
-                    });
-                })
-                .catch(error => console.error('Error loading data:', error));
+            // Zoning pop-up (only when tax lot layer is off)
+            zoningLayer.addListener('click', function(event) {
+                const zoning = event.feature.getProperty('ZONEDEF2') || 'Zoning Not Specified';
     
-            // Add layer control for boundary and zoning layers
+                const contentString = `
+                    <div style="margin: 0; padding: 5px;">
+                        <p style="margin: 0; padding: 0;"><strong>Zoning:</strong> ${zoning}</p>
+                    </div>
+                `;
+    
+                infoWindow.setContent(contentString);
+                infoWindow.setPosition(event.latLng);
+                infoWindow.open(map);
+            });
+    
+            // Add layer control for tax lots and zoning layers
             document.getElementById('boundary-layer').addEventListener('change', function() {
                 boundaryLayer.setMap(this.checked ? map : null);
+            });
+    
+            document.getElementById('taxlots-layer').addEventListener('change', function() {
+                taxLotsLayer.setMap(this.checked ? map : null);
             });
     
             document.getElementById('zoning-layer').addEventListener('change', function() {
