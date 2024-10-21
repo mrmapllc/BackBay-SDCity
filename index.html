@@ -210,10 +210,11 @@
     
     <script>
         let map;
-        let boundaryLayer, taxLotsLayer, zoningLayer;
+        let boundaryLayer, zoningLayer;
+        let taxLotsLayers = [];  // Array to hold the 7 tax lots layers
         let isLoading = true;
         let infoWindow;
-        let markers = []; // To store search results markers
+        let markers = [];
     
         // Show loading spinner while the map is loading
         function showLoading() {
@@ -269,61 +270,66 @@
             });
             zoningLayer.setMap(map);
     
-            // Load the Tax Lots Layer from Google Cloud Storage GeoJSON
-            taxLotsLayer = new google.maps.Data();
-            taxLotsLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_1.geojson');
-            taxLotsLayer.setStyle({
-                fillOpacity: 0, // Full transparency
-                strokeColor: '#FF0000', // Red border
-                strokeWeight: 2
+            // Load the 7 Tax Lots GeoJSON files
+            const taxLotsFiles = [
+                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_1.geojson',
+                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_2.geojson',
+                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_3.geojson',
+                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_4.geojson',
+                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_5.geojson',
+                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_6.geojson',
+                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_7.geojson'
+            ];
+    
+            // Loop through and load each tax lot GeoJSON file
+            taxLotsFiles.forEach(function(url) {
+                const taxLotsLayer = new google.maps.Data();
+                taxLotsLayer.loadGeoJson(url);
+                taxLotsLayer.setStyle({
+                    fillOpacity: 0, // Full transparency
+                    strokeColor: '#FF0000', // Red border
+                    strokeWeight: 2
+                });
+    
+                // Add click event for each tax lot
+                taxLotsLayer.addListener('click', function(event) {
+                    const siteAddress = event.feature.getProperty('SiteAddres') || 'No Address Available';
+                    const zoning = event.feature.getProperty('ZONEDEF2') || 'Zoning Not Specified';
+                    const legalDescription = event.feature.getProperty('LegalDescr') || 'Legal Description Not Available';
+    
+                    const contentString = `
+                        <div style="margin: 0; padding: 5px;">
+                            <h3 style="margin: 0; padding: 0; font-size: 18px;">${siteAddress}</h3>
+                            <p style="margin: 5px 0; padding: 0;"><strong>Zoning:</strong> ${zoning}</p>
+                            <p style="margin: 5px 0; padding: 0;"><strong>Legal Description:</strong> ${legalDescription}</p>
+                        </div>
+                    `;
+    
+                    infoWindow.setContent(contentString);
+                    infoWindow.setPosition(event.latLng);
+                    infoWindow.open(map);
+                });
+    
+                // Push each layer into the array
+                taxLotsLayers.push(taxLotsLayer);
+                taxLotsLayer.setMap(map);  // Set each layer on the map by default
             });
-            taxLotsLayer.setMap(map); // Make sure the tax lots layer is added to the map
     
-            // Add a click listener to the tax lots layer to show a pop-up with specific information
-            taxLotsLayer.addListener('click', function(event) {
-                const siteAddress = event.feature.getProperty('SiteAddres') || 'No Address Available';
-                const zoning = event.feature.getProperty('ZONEDEF2') || 'Zoning Not Specified';
-                const legalDescription = event.feature.getProperty('LegalDescr') || 'Legal Description Not Available';
-    
-                const contentString = `
-                    <div style="margin: 0; padding: 5px;">
-                        <h3 style="margin: 0; padding: 0; font-size: 18px;">${siteAddress}</h3>
-                        <p style="margin: 5px 0; padding: 0;"><strong>Zoning:</strong> ${zoning}</p>
-                        <p style="margin: 5px 0; padding: 0;"><strong>Legal Description:</strong> ${legalDescription}</p>
-                    </div>
-                `;
-    
-                infoWindow.setContent(contentString);
-                infoWindow.setPosition(event.latLng);
-                infoWindow.open(map);
-            });
-    
-            // Zoning pop-up (only when tax lot layer is off)
-            zoningLayer.addListener('click', function(event) {
-                const zoning = event.feature.getProperty('ZONEDEF2') || 'Zoning Not Specified';
-    
-                const contentString = `
-                    <div style="margin: 0; padding: 5px;">
-                        <p style="margin: 0; padding: 0;"><strong>Zoning:</strong> ${zoning}</p>
-                    </div>
-                `;
-    
-                infoWindow.setContent(contentString);
-                infoWindow.setPosition(event.latLng);
-                infoWindow.open(map);
-            });
-    
-            // Add layer control for tax lots and zoning layers
+            // Add layer control for City Boundary and Zoning
             document.getElementById('boundary-layer').addEventListener('change', function() {
                 boundaryLayer.setMap(this.checked ? map : null);
             });
     
-            document.getElementById('taxlots-layer').addEventListener('change', function() {
-                taxLotsLayer.setMap(this.checked ? map : null);
-            });
-    
             document.getElementById('zoning-layer').addEventListener('change', function() {
                 zoningLayer.setMap(this.checked ? map : null);
+            });
+    
+            // Add a single control for all Tax Lots Layers
+            document.getElementById('taxlots-layer').addEventListener('change', function() {
+                const display = this.checked ? map : null;
+                taxLotsLayers.forEach(function(layer) {
+                    layer.setMap(display);
+                });
             });
     
             // Hide the loading spinner once the map and layers are fully loaded
@@ -364,7 +370,7 @@
                 });
                 markers = [];
     
-                // For each place, get the icon, name and location.
+                // For each place, get the icon, name, and location.
                 const bounds = new google.maps.LatLngBounds();
                 places.forEach(function(place) {
                     if (!place.geometry || !place.geometry.location) {
