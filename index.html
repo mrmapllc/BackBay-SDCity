@@ -24,23 +24,6 @@
             justify-content: space-between;
         }
 
-        /* Map Search Bar */
-        .controls {
-            margin-top: 10px;
-            background-color: #fff;
-            border-radius: 3px;
-            border: 1px solid transparent;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-            font-size: 16px;
-            outline: none;
-            padding: 10px;
-            margin-left: 10px;
-            width: 300px;
-            height: 30px;
-            box-sizing: border-box;
-            text-overflow: ellipsis;
-        }
-        
         nav a {
             color: white;
             text-decoration: none;
@@ -83,78 +66,11 @@
             margin-top: 5px;
         }
 
-        #map {
+        #dashboard {
             flex-grow: 1;
             width: 100%;
             height: 100%; /* Ensure map takes up full height */
-        }
-
-        /* Tools button in the navigation bar */
-        .tools-btn {
-            padding: 10px 20px;
-            color: white;
-            text-decoration: none;
-            font-size: 16px;
-            border: 1px solid white;
-            border-radius: 5px;
-            background-color: transparent;
-            transition: background-color 0.3s;
-        }
-
-        .tools-btn:hover {
-            background-color: #575757;
-        }
-
-        /* Control panel box (tools) positioned at the bottom left */
-        .control-panel {
-            display: none;
-            position: absolute;
-            background-color: white;
-            bottom: 20px;
-            left: 20px;
-            padding: 10px;
-            z-index: 10;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-        }
-
-        /* Map controls */
-        .control-box {
-            margin-bottom: 20px;
-        }
-
-        #controls {
-            width: 200px;
-        }
-
-        #legend {
-            max-height: 300px;
-            overflow-y: auto;
-            font-size: 12px;
-            width: 300px;
-        }
-
-        .legend-color {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            margin-right: 6px;
-            border: 1px solid #000;
-            vertical-align: middle;
-        }
-
-        /* Loading spinner */
-        #loading {
-            display: none;
-            position: fixed;
-            z-index: 100;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        #loading img {
-            width: 50px;
+            border: none;
         }
     </style>
 </head>
@@ -163,7 +79,6 @@
     <!-- Navigation Bar -->
     <nav>
         <a href="https://mrmapllc.github.io/BackBayHomePage/" class="tools-btn">Home</a>
-        <a href="#" id="tools-btn" class="tools-btn">Tools</a>
         <a href="https://mrmapgroup.com/contact-us" target="_blank" class="tools-btn">Support</a>
     </nav>
 
@@ -171,155 +86,13 @@
 
         <!-- Header -->
         <header>
-            <h1>GIS Zoning Map - San Diego, CA</h1>
+            <h1>GIS Zoning Dashboard - San Diego, CA</h1>
             <p id="note">Note: Best viewed in Google Chrome</p>
         </header>
 
-        <!-- Map Container -->
-        <div id="map"></div>
+        <!-- Embed ArcGIS Dashboard -->
+        <iframe id="dashboard" src="https://mrmap.maps.arcgis.com/apps/dashboards/91e964325972432cb91ddc85b76442d5"></iframe>
 
-        <!-- Add the search bar input field -->
-        <input id="pac-input" class="controls" type="text" placeholder="Search for an address" />
-        
-        <!-- Loading spinner -->
-        <div id="loading">
-            <img src="https://i.imgur.com/JfPpwOA.gif" alt="Loading...">
-        </div>
-
-        <!-- Control Panel (hidden by default) -->
-        <div class="control-panel" id="control-panel">
-            <!-- Layers control box -->
-            <div class="control-box" id="controls">
-                <h4 style="margin: 0;">Layers</h4>
-                <label><input type="checkbox" id="boundary-layer" checked> City Boundary</label><br>
-                <label><input type="checkbox" id="taxlots-layer" checked> Tax Lots</label><br>
-                <label><input type="checkbox" id="zoning-layer" checked> Zoning</label>
-            </div>
-
-            <!-- Legend for zoning colors -->
-            <div id="legend" class="control-box">
-                <h4>Legend</h4>
-                <!-- Add the legend items here as needed -->
-            </div>
-
-        </div>
     </div>
-
-    <!-- Load the Google Maps JavaScript API and Places Library -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCopWxzsrH0C5BUwVKJl0iG3omupkgmw60&libraries=places&callback=initMap" async defer></script>
-    
-    <script>
-        let map;
-        let taxLotsLayers = [];  // Array to hold the 7 tax lots layers
-        let infoWindow;
-        
-        // Initialize and add the map
-        function initMap() {
-            const centerPoint = { lat: 32.8746, lng: -117.1222 }; // Centered on San Diego
-    
-            map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 12, // Zoom set to 12
-                center: centerPoint,
-                gestureHandling: "greedy" // Allow zooming with mouse scroll directly
-            });
-    
-            infoWindow = new google.maps.InfoWindow();
-    
-            // Load the City Boundary Layer (same as before)
-            loadCityBoundary();
-    
-            // Load the Zoning Layer (always visible)
-            loadZoningLayer();
-    
-            // Only load the tax lots if zoom level is greater than 5
-            map.addListener('zoom_changed', function() {
-                const zoomLevel = map.getZoom();
-                if (zoomLevel > 5) {
-                    loadTaxLots();
-                } else {
-                    unloadTaxLots();
-                }
-            });
-        }
-    
-        // Load the City Boundary Layer
-        function loadCityBoundary() {
-            const boundaryLayer = new google.maps.Data();
-            boundaryLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Bdry.geojson');
-            boundaryLayer.setStyle({
-                fillOpacity: 0,
-                strokeColor: '#000000',
-                strokeWeight: 2
-            });
-            boundaryLayer.setMap(map);
-        }
-    
-        // Load the Zoning Layer
-        function loadZoningLayer() {
-            const zoningLayer = new google.maps.Data();
-            zoningLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Zoning.geojson');
-            zoningLayer.setStyle({
-                fillOpacity: 0,  // No fill (transparent)
-                strokeColor: '#000000',  // Black border
-                strokeWeight: 1
-            });
-            zoningLayer.setMap(map);
-        }
-    
-        // Load the tax lots GeoJSON files when zoom is greater than 5
-        function loadTaxLots() {
-            if (taxLotsLayers.length > 0) {
-                // If layers are already loaded, just show them
-                taxLotsLayers.forEach(layer => layer.setMap(map));
-                return;
-            }
-    
-            const taxLotsFiles = [
-                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_1.geojson',
-                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_2.geojson',
-                // Add the remaining 5 files here
-            ];
-    
-            taxLotsFiles.forEach(function(url) {
-                const taxLotsLayer = new google.maps.Data();
-                taxLotsLayer.loadGeoJson(url);
-                taxLotsLayer.setStyle({
-                    fillOpacity: 0, // Full transparency
-                    strokeColor: '#FF0000', // Red border
-                    strokeWeight: 2
-                });
-    
-                // Add click event for each tax lot
-                taxLotsLayer.addListener('click', function(event) {
-                    const siteAddress = event.feature.getProperty('SiteAddres') || 'No Address Available';
-                    const zoning = event.feature.getProperty('ZONEDEF2') || 'Zoning Not Specified';
-                    const legalDescription = event.feature.getProperty('LegalDescr') || 'Legal Description Not Available';
-    
-                    const contentString = `
-                        <div style="margin: 0; padding: 5px;">
-                            <h3 style="margin: 0; padding: 0; font-size: 18px;">${siteAddress}</h3>
-                            <p style="margin: 5px 0; padding: 0;"><strong>Zoning:</strong> ${zoning}</p>
-                            <p style="margin: 5px 0; padding: 0;"><strong>Legal Description:</strong> ${legalDescription}</p>
-                        </div>
-                    `;
-    
-                    infoWindow.setContent(contentString);
-                    infoWindow.setPosition(event.latLng);
-                    infoWindow.open(map);
-                });
-    
-                // Add to the layers array and show on the map
-                taxLotsLayers.push(taxLotsLayer);
-                taxLotsLayer.setMap(map);
-            });
-        }
-    
-        // Unload and hide the tax lots when zoom is less than 5
-        function unloadTaxLots() {
-            taxLotsLayers.forEach(layer => layer.setMap(null));
-        }
-    </script>
-
-
 </body>
 </html>
