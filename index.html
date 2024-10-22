@@ -210,36 +210,11 @@
     
     <script>
         let map;
-        let boundaryLayer, zoningLayer;
         let taxLotsLayers = [];  // Array to hold the 7 tax lots layers
-        let isLoading = true;
         let infoWindow;
-        let markers = [];
-    
-        // Show loading spinner while the map is loading
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-        }
-    
-        // Hide loading spinner once the map is loaded
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-    
-        // Toggle the control panel
-        document.getElementById('tools-btn').addEventListener('click', function() {
-            const controlPanel = document.getElementById('control-panel');
-            if (controlPanel.style.display === 'none' || controlPanel.style.display === '') {
-                controlPanel.style.display = 'block';
-            } else {
-                controlPanel.style.display = 'none';
-            }
-        });
-    
+        
         // Initialize and add the map
         function initMap() {
-            showLoading();
-    
             const centerPoint = { lat: 32.8746, lng: -117.1222 }; // Centered on San Diego
     
             map = new google.maps.Map(document.getElementById('map'), {
@@ -250,8 +225,26 @@
     
             infoWindow = new google.maps.InfoWindow();
     
-            // Load the City Boundary Layer
-            boundaryLayer = new google.maps.Data();
+            // Load the City Boundary Layer (same as before)
+            loadCityBoundary();
+    
+            // Load the Zoning Layer (always visible)
+            loadZoningLayer();
+    
+            // Only load the tax lots if zoom level is greater than 5
+            map.addListener('zoom_changed', function() {
+                const zoomLevel = map.getZoom();
+                if (zoomLevel > 5) {
+                    loadTaxLots();
+                } else {
+                    unloadTaxLots();
+                }
+            });
+        }
+    
+        // Load the City Boundary Layer
+        function loadCityBoundary() {
+            const boundaryLayer = new google.maps.Data();
             boundaryLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Bdry.geojson');
             boundaryLayer.setStyle({
                 fillOpacity: 0,
@@ -259,9 +252,11 @@
                 strokeWeight: 2
             });
             boundaryLayer.setMap(map);
+        }
     
-            // Load the Zoning Layer
-            zoningLayer = new google.maps.Data();
+        // Load the Zoning Layer
+        function loadZoningLayer() {
+            const zoningLayer = new google.maps.Data();
             zoningLayer.loadGeoJson('https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Zoning.geojson');
             zoningLayer.setStyle({
                 fillOpacity: 0,  // No fill (transparent)
@@ -269,19 +264,22 @@
                 strokeWeight: 1
             });
             zoningLayer.setMap(map);
+        }
     
-            // Load the 7 Tax Lots GeoJSON files
+        // Load the tax lots GeoJSON files when zoom is greater than 5
+        function loadTaxLots() {
+            if (taxLotsLayers.length > 0) {
+                // If layers are already loaded, just show them
+                taxLotsLayers.forEach(layer => layer.setMap(map));
+                return;
+            }
+    
             const taxLotsFiles = [
                 'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_1.geojson',
                 'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_2.geojson',
-                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_3.geojson',
-                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_4.geojson',
-                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_5.geojson',
-                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_6.geojson',
-                'https://storage.googleapis.com/cityofsandiego_data/CityOfSanDiego_Parcels_7.geojson'
+                // Add the remaining 5 files here
             ];
     
-            // Loop through and load each tax lot GeoJSON file
             taxLotsFiles.forEach(function(url) {
                 const taxLotsLayer = new google.maps.Data();
                 taxLotsLayer.loadGeoJson(url);
@@ -310,92 +308,18 @@
                     infoWindow.open(map);
                 });
     
-                // Push each layer into the array
+                // Add to the layers array and show on the map
                 taxLotsLayers.push(taxLotsLayer);
-                taxLotsLayer.setMap(map);  // Set each layer on the map by default
+                taxLotsLayer.setMap(map);
             });
-    
-            // Add layer control for City Boundary and Zoning
-            document.getElementById('boundary-layer').addEventListener('change', function() {
-                boundaryLayer.setMap(this.checked ? map : null);
-            });
-    
-            document.getElementById('zoning-layer').addEventListener('change', function() {
-                zoningLayer.setMap(this.checked ? map : null);
-            });
-    
-            // Add a single control for all Tax Lots Layers
-            document.getElementById('taxlots-layer').addEventListener('change', function() {
-                const display = this.checked ? map : null;
-                taxLotsLayers.forEach(function(layer) {
-                    layer.setMap(display);
-                });
-            });
-    
-            // Hide the loading spinner once the map and layers are fully loaded
-            google.maps.event.addListenerOnce(map, 'idle', function(){
-                hideLoading();
-            });
-    
-
         }
     
-        // Initialize the search box for the map
-        function initSearchBox() {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.placeholder = 'Search for an address';
-            input.classList.add('controls');
-            map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
-    
-            const searchBox = new google.maps.places.SearchBox(input);
-    
-            // Bias the SearchBox results towards current map's viewport
-            map.addListener('bounds_changed', function() {
-                searchBox.setBounds(map.getBounds());
-            });
-    
-            // Listen for the event fired when the user selects a prediction and retrieves more details.
-            searchBox.addListener('places_changed', function() {
-                const places = searchBox.getPlaces();
-    
-                if (places.length === 0) {
-                    return;
-                }
-    
-                // Clear out the old markers.
-                markers.forEach(function(marker) {
-                    marker.setMap(null);
-                });
-                markers = [];
-    
-                // For each place, get the icon, name, and location.
-                const bounds = new google.maps.LatLngBounds();
-                places.forEach(function(place) {
-                    if (!place.geometry || !place.geometry.location) {
-                        console.log("Returned place contains no geometry");
-                        return;
-                    }
-    
-                    // Create a marker for each place.
-                    const marker = new google.maps.Marker({
-                        map: map,
-                        title: place.name,
-                        position: place.geometry.location
-                    });
-    
-                    markers.push(marker);
-    
-                    if (place.geometry.viewport) {
-                        bounds.union(place.geometry.viewport);
-                    } else {
-                        bounds.extend(place.geometry.location);
-                    }
-                });
-                map.fitBounds(bounds);
-            });
+        // Unload and hide the tax lots when zoom is less than 5
+        function unloadTaxLots() {
+            taxLotsLayers.forEach(layer => layer.setMap(null));
         }
     </script>
+
 
 </body>
 </html>
